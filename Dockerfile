@@ -11,5 +11,17 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . ./
 COPY --from=frontend /frontend/dist ./app/static/
+
+# Create a seed database with the correct schema during the build
+RUN python scripts/create_seed_db.py
+
 ENV PYTHONPATH=/app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
+# Copy the entrypoint script and make it executable
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Use the entrypoint script to manage startup
+ENTRYPOINT ["/entrypoint.sh"]
+# The CMD will be passed as an argument to the entrypoint
+CMD ["web"]

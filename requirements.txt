@@ -13,3 +13,7 @@ langgraph>=0.2.0
 langchain-openai>=0.2.0
 langchain-core>=0.3.0
 sse-starlette>=1.8.0
+tiktoken
+requests
+beautifulsoup4
+honcho

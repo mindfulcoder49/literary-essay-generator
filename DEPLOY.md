@@ -19,18 +19,15 @@ fly auth login
 
 ### 2. Launch the App
 
-This command will register your application on Fly.io and generate an initial `fly.toml` configuration file. It will prompt you for an app name and region.
+This command registers your application on Fly.io. It will use the `fly.toml` file in this repository to determine the app name (`literary-essays`) and region.
 
 ```bash
 fly launch --no-deploy
 ```
 
--   When asked to tweak settings, say **yes**.
--   Ensure the generated `fly.toml` matches the one in this repository, which includes the correct environment variables, mounts, and processes.
-
 ### 3. Create a Persistent Volume
 
-The application uses a SQLite database, which requires a persistent volume to store its data. Create a volume with the name `literary_data`.
+The application uses a SQLite database, which requires a persistent volume to store its data. Create a volume with the name `literary_data` in your app's primary region.
 
 ```bash
 fly volumes create literary_data --size 1
@@ -41,6 +38,8 @@ The size is in GB. 1GB is a good starting point.
 ### 4. Set Secrets
 
 Set the required API keys as secrets. These are securely stored by Fly.io and injected as environment variables at runtime.
+
+**IMPORTANT:** You must set these secrets *before* your first deploy, otherwise the application will fail when it tries to connect to external services.
 
 Replace `...` with your actual keys.
 
@@ -53,47 +52,29 @@ fly secrets set \
 ### 5. Deploy the Application
 
 Deploy your application. This command will:
-- Build the Docker image.
+- Build the Docker image using `Dockerfile`. During this build, a "seed" database with the correct schema is created.
 - Push the image to Fly.io's registry.
-- Run the `release_command` from `fly.toml` (`alembic upgrade head`) to set up the database.
-- Start the `web` process.
+- Start the `app` process. The container's `entrypoint.sh` script will automatically copy the seed database to your persistent volume and then use `honcho` to start both the `web` and `worker` services on the same machine.
 
 ```bash
 fly deploy
 ```
 
-### 6. Scale the Worker
+Your application is now live.
 
-By default, only the `web` process is started. You need to manually scale the `worker` process to start processing jobs.
+### 6. How Scaling Works Now
 
-```bash
-fly scale count 1 --process-group worker
-```
+With the `web` and `worker` processes co-located on a single machine, the scaling model is much simpler:
 
-### 7. Set up Automated Scaling (Optional, Recommended)
+-   The `[http_service]` is configured with `auto_stop_machines = 'stop'`.
+-   When your app receives HTTP traffic, Fly.io will start one `app` machine.
+-   On this machine, `honcho` starts both the `web` and `worker` processes.
+-   The `worker` will automatically start processing any jobs in the queue.
+-   When the `web` service is idle (no HTTP traffic), Fly.io will automatically stop the entire machine, which also stops the worker.
 
-The `web` process will auto-stop when idle, but the `worker` process **will not**. To avoid manual scaling and unnecessary costs, you can use a GitHub Actions workflow to automatically scale your worker based on the job queue.
+This provides excellent cost savings. The worker only runs when the web server is active, and the entire machine shuts down when idle. **You no longer need the GitHub Actions autoscaler or manual scaling commands.**
 
-This method is very cost-effective because it runs the scaling logic on a free GitHub Actions runner, which connects to your app's private network to check the database directly without waking up the `web` service.
-
-**Setup Steps:**
-
-1.  **Create a Fly.io API Token:**
-    ```bash
-    fly tokens create org
-    ```
-    This token allows GitHub Actions to manage your Fly.io app.
-
-2.  **Add the Token to GitHub Secrets:**
-    - In your GitHub repository, go to `Settings` > `Secrets and variables` > `Actions`.
-    - Click `New repository secret`.
-    - Name the secret `FLY_API_TOKEN`.
-    - Paste the token you just created.
-
-3.  **Enable the Workflow:**
-    The `.github/workflows/autoscale.yml` file is already included in this repository. Once you add the secret, the workflow will start running automatically every 15 minutes. It will scale your worker count to `1` if there are jobs in the queue, and back to `0` when the queue is empty.
-
-### 8. Check Application Status
+### 7. Check Application Status
 
 You can check the status of your deployed application, including machine status and IP addresses.
 
@@ -108,3 +89,21 @@ fly logs
 ```
 
 Your application is now fully deployed and running on Fly.io.
+
+---
+
+## Troubleshooting
+
+### Forgot to Set Secrets Before Deploying?
+
+If you deployed the app before setting the `OPENAI_API_KEY` or `PINECONE_API_KEY`, your application will fail when trying to process jobs. To fix this:
+
+1.  **Set the secrets now:**
+    ```bash
+    fly secrets set OPENAI_API_KEY=... PINECONE_API_KEY=...
+    ```
+
+2.  **Restart your app's machines:** This will force them to pick up the new secrets. This command only affects the `literary-essays` app.
+    ```bash
+    fly apps restart literary-essays
+    ```

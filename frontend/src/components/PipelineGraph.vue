@@ -114,25 +114,31 @@ const straightEdges = computed(() => {
   const edges: Array<{ id: string; x1: number; y1: number; x2: number; y2: number; completed: boolean }> = []
   const row0 = ['ingest', 'summarize_book', 'discover_themes', 'retrieve_evidence', 'expand_context']
   for (let i = 0; i < row0.length - 1; i++) {
-    const from = nodePos(row0[i])
-    const to = nodePos(row0[i + 1])
+    const fromKey = row0[i]
+    const toKey = row0[i + 1]
+    if (!fromKey || !toKey) continue
+    const from = nodePos(fromKey)
+    const to = nodePos(toKey)
     edges.push({
-      id: `${row0[i]}-${row0[i + 1]}`,
+      id: `${fromKey}-${toKey}`,
       x1: from.cx + nodeW / 2, y1: from.cy,
       x2: to.cx - nodeW / 2, y2: to.cy,
-      completed: isCompleted(row0[i]),
+      completed: isCompleted(fromKey),
     })
   }
   // Row 1 goes right-to-left: write_theme_intros → draft_essay → review_essay → persist_results
   const row1 = ['write_theme_intros', 'draft_essay', 'review_essay', 'persist_results']
   for (let i = 0; i < row1.length - 1; i++) {
-    const from = nodePos(row1[i])
-    const to = nodePos(row1[i + 1])
+    const fromKey = row1[i]
+    const toKey = row1[i + 1]
+    if (!fromKey || !toKey) continue
+    const from = nodePos(fromKey)
+    const to = nodePos(toKey)
     edges.push({
-      id: `${row1[i]}-${row1[i + 1]}`,
+      id: `${fromKey}-${toKey}`,
       x1: from.cx - nodeW / 2, y1: from.cy,
       x2: to.cx + nodeW / 2, y2: to.cy,
-      completed: isCompleted(row1[i]),
+      completed: isCompleted(fromKey),
     })
   }
   return edges

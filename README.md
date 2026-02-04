@@ -33,29 +33,15 @@ alembic upgrade head
 
 If you are using SQLite, a `literary.db` file will be created.
 
-If you run from `app/`, use:
+4. Start all services (API and worker):
 
 ```bash
-alembic -c alembic.ini upgrade head
+honcho start
 ```
 
-If you already ran migrations, run the latest:
+This will start both the `web` and `worker` processes, with their logs interleaved in your terminal.
 
-```bash
-alembic upgrade head
-```
-
-4. Start API:
-
-```bash
-uvicorn app.main:app --reload
-```
-
-5. Start worker (separate terminal):
-
-```bash
-python -m app.worker
-```
+> **Troubleshooting:** If you see `honcho: command not found`, your virtual environment may not be activated correctly. Run `source .venv/bin/activate` and try again.
 
 ## API
 
