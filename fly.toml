@@ -1,0 +1,36 @@
+app = "literary-essays"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DATABASE_URL = "sqlite:////data/literary.db"
+  PINECONE_INDEX = "literary-essays"
+  PINECONE_CLOUD = "aws"
+  PINECONE_REGION = "us-east-1"
+  OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
+  OPENAI_CHAT_MODEL = "gpt-5-mini"
+
+[deploy]
+  release_command = "alembic upgrade head"
+
+[[mounts]]
+  source = "literary_data"
+  destination = "/data"
+
+[processes]
+  web = "uvicorn app.main:app --host 0.0.0.0 --port 8080"
+  worker = "python -m app.worker"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
