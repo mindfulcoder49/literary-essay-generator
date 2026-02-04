@@ -6,6 +6,7 @@
 
         <template v-if="resultLoaded && result">
           <ThemePills :themes="result.themes" />
+          <BookSummary v-if="result.book_summary" :summary="result.book_summary" />
           <EvidencePanel :evidence="result.evidence" />
           <EssayDisplay :markdown="result.essay_markdown" />
         </template>
@@ -29,6 +30,7 @@ import JobProgress from '../components/JobProgress.vue'
 import ThemePills from '../components/ThemePills.vue'
 import EvidencePanel from '../components/EvidencePanel.vue'
 import EssayDisplay from '../components/EssayDisplay.vue'
+import BookSummary from '../components/BookSummary.vue'
 
 const route = useRoute()
 const jobId = route.params.id as string

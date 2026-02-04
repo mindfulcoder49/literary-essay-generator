@@ -17,6 +17,7 @@ class JobStatusResponse(BaseModel):
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
+    book_summary: str | None = None
 
 
 class JobResultResponse(BaseModel):

@@ -28,7 +28,7 @@ from app.graph.prompts import (
 from app.graph.state import EssayGraphState
 from app.logging_config import configure_logging
 from app.models import Document, Job, JobArtifact
-from app.pinecone_client import PineconeClient, query_similar, upsert_embeddings
+from app.pinecone_client import PineconeClient, namespace_vector_count, query_similar, upsert_embeddings
 from app.queue import update_job_progress
 from app.segment import segment_text
 
@@ -124,9 +124,27 @@ def ingest_node(state: EssayGraphState) -> dict[str, Any]:
         segments = segment_text(normalized, settings.max_segment_chars)
         logger.info("ingest_node: segmented count=%s", len(segments))
 
-        update_job_progress(db, job, "ingest", f"embedding {len(segments)} segments")
+        # Check if vectors already exist in Pinecone for this namespace
+        update_job_progress(db, job, "ingest", "checking Pinecone for existing vectors")
+        pc = PineconeClient()
+        existing_count = 0
+        try:
+            existing_count = namespace_vector_count(pc, namespace)
+        except Exception:
+            logger.info("ingest_node: could not check Pinecone stats, will embed")
 
-        if segments:
+        if existing_count > 0:
+            logger.info(
+                "ingest_node: found %s existing vectors in namespace=%s, skipping embedding",
+                existing_count, namespace,
+            )
+            update_job_progress(
+                db, job, "ingest",
+                f"found {existing_count} existing vectors in Pinecone, skipping embedding",
+            )
+        elif segments:
+            update_job_progress(db, job, "ingest", f"embedding {len(segments)} segments")
+
             embeddings_model = OpenAIEmbeddings(
                 model=settings.openai_embedding_model,
                 api_key=settings.openai_api_key,
@@ -135,7 +153,6 @@ def ingest_node(state: EssayGraphState) -> dict[str, Any]:
             embeddings = embeddings_model.embed_documents(texts)
             logger.info("ingest_node: embedded %s segments", len(embeddings))
 
-            pc = PineconeClient()
             pc.ensure_index(dimension=len(embeddings[0]))
 
             batch = []
@@ -184,20 +201,8 @@ def summarize_book_node(state: EssayGraphState) -> dict[str, Any]:
     document_id = state["document_id"]
     segments = state["segments"]
 
-    with SessionLocal() as db:
-        job = db.get(Job, job_id)
-        doc = db.get(Document, document_id)
-
-        # Check for cached summary
-        if doc and doc.summary:
-            logger.info("summarize_book_node: using cached summary document_id=%s", document_id)
-            update_job_progress(db, job, "summarize_book", "using cached summary")
-            return {"book_summary": doc.summary, "current_step": "book_summarized"}
-
-        update_job_progress(db, job, "summarize_book", "starting summarization")
-
-    chunk_size = settings.summary_chunk_size
     texts = [seg["text"] for seg in segments]
+    chunk_size = settings.summary_chunk_size
     chunks = [texts[i : i + chunk_size] for i in range(0, len(texts), chunk_size)]
     total_chunks = len(chunks)
 
@@ -208,13 +213,43 @@ def summarize_book_node(state: EssayGraphState) -> dict[str, Any]:
     )
 
     running_summary = ""
-    for i, chunk in enumerate(chunks):
+    start_chunk_idx = 0
+
+    # Load existing summary and determine starting point
+    with SessionLocal() as db:
+        job = db.get(Job, job_id)
+        doc = db.get(Document, document_id)
+        if doc:
+            if doc.summary:
+                running_summary = doc.summary
+            if doc.summary_chunk_count > 0:
+                start_chunk_idx = doc.summary_chunk_count
+                logger.info(
+                    "summarize_book_node: resuming summary from DB at chunk %s", start_chunk_idx
+                )
+                job.progress = {
+                    "current_step": "summarize_book",
+                    "detail": f"Resuming at chunk {start_chunk_idx + 1}...",
+                    "running_summary": running_summary,
+                }
+                db.add(job)
+                db.commit()
+
+    if start_chunk_idx >= total_chunks and running_summary:
+        logger.info("summarize_book_node: summary already complete.")
+        return {"book_summary": running_summary, "current_step": "book_summarized"}
+
+    for i, chunk in enumerate(chunks[start_chunk_idx:], start=start_chunk_idx):
         chunk_text = "\n\n".join(chunk)
         with SessionLocal() as db:
             job = db.get(Job, job_id)
-            update_job_progress(
-                db, job, "summarize_book", f"Summarizing chunk {i + 1}/{total_chunks}..."
-            )
+            job.progress = {
+                "current_step": "summarize_book",
+                "detail": f"Summarizing chunk {i + 1}/{total_chunks}...",
+                "running_summary": running_summary or "",
+            }
+            db.add(job)
+            db.commit()
 
         prompt = SUMMARIZE_CHUNK_USER.format(
             running_summary=running_summary or "(none — this is the first chunk)",
@@ -227,15 +262,31 @@ def summarize_book_node(state: EssayGraphState) -> dict[str, Any]:
         running_summary = response.content
         logger.info("summarize_book_node: chunk %s/%s done", i + 1, total_chunks)
 
-    # Cache the summary on the document
-    with SessionLocal() as db:
-        doc = db.get(Document, document_id)
-        if doc:
-            doc.summary = running_summary
-            db.add(doc)
+        # Persist running summary to document and progress
+        with SessionLocal() as db:
+            doc = db.get(Document, document_id)
+            if doc:
+                doc.summary = running_summary
+                doc.summary_chunk_count = i + 1
+                db.add(doc)
+            job = db.get(Job, job_id)
+            job.progress = {
+                "current_step": "summarize_book",
+                "detail": f"Completed chunk {i + 1}/{total_chunks}",
+                "running_summary": running_summary,
+            }
+            db.add(job)
             db.commit()
+
+    with SessionLocal() as db:
         job = db.get(Job, job_id)
-        update_job_progress(db, job, "summarize_book", "summarization complete")
+        job.progress = {
+            "current_step": "summarize_book",
+            "detail": "summarization complete",
+            "running_summary": running_summary,
+        }
+        db.add(job)
+        db.commit()
 
     return {
         "book_summary": running_summary,

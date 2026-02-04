@@ -55,6 +55,16 @@ def upsert_embeddings(
         pc._logger.info("pinecone upsert namespace=%s batch=%s/%s", namespace, i + len(batch), len(payload))
 
 
+def namespace_vector_count(pc: PineconeClient, namespace: str) -> int:
+    index = pc.index()
+    stats = index.describe_index_stats()
+    ns_map = stats.get("namespaces", {})
+    ns_info = ns_map.get(namespace, {})
+    count = ns_info.get("vector_count", 0)
+    pc._logger.info("pinecone namespace_vector_count namespace=%s count=%s", namespace, count)
+    return count
+
+
 def query_similar(
     pc: PineconeClient,
     namespace: str,

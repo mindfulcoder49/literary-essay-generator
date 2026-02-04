@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sse_starlette.sse import EventSourceResponse
 
 from app.config import get_settings
@@ -148,9 +148,15 @@ def create_job(payload: JobCreateRequest, db: Session = Depends(get_db)):
 @api.get("/jobs/{job_id}", response_model=JobStatusResponse)
 def get_job_status(job_id: UUID, db: Session = Depends(get_db)):
     logger.info("job status: %s", job_id)
-    job = db.get(Job, job_id)
+    stmt = select(Job).options(joinedload(Job.document)).where(Job.id == job_id)
+    job = db.execute(stmt).scalars().first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    book_summary = None
+    if job.document:
+        book_summary = job.document.summary
+
     return JobStatusResponse(
         id=job.id,
         status=job.status,
@@ -159,6 +165,7 @@ def get_job_status(job_id: UUID, db: Session = Depends(get_db)):
         created_at=job.created_at,
         started_at=job.started_at,
         finished_at=job.finished_at,
+        book_summary=book_summary,
     )
 
 
@@ -221,10 +228,15 @@ async def job_stream(job_id: UUID):
             current_step = progress.get("current_step")
             detail = progress.get("detail", "")
 
+            running_summary = progress.get("running_summary", "")
+
             if current_step and (current_step != last_step or detail != last_detail):
+                event_data: dict[str, str] = {"step": current_step, "detail": detail}
+                if running_summary:
+                    event_data["running_summary"] = running_summary
                 yield {
                     "event": "progress",
-                    "data": json.dumps({"step": current_step, "detail": detail}),
+                    "data": json.dumps(event_data),
                 }
                 last_step = current_step
                 last_detail = detail

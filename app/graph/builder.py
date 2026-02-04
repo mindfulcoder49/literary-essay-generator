@@ -17,6 +17,20 @@ from app.graph.nodes import (
 from app.graph.state import EssayGraphState
 
 
+PIPELINE_NODES = [
+    "ingest",
+    "summarize_book",
+    "discover_themes",
+    "retrieve_evidence",
+    "expand_context",
+    "write_theme_intros",
+    "draft_essay",
+    "review_essay",
+    "revise_essay",
+    "persist_results",
+]
+
+
 def _should_revise(state: EssayGraphState) -> str:
     if state.get("essay_approved", False):
         return "persist"

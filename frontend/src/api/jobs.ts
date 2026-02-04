@@ -8,6 +8,7 @@ export interface JobStatus {
   created_at: string
   started_at: string | null
   finished_at: string | null
+  book_summary: string | null
 }
 
 export interface JobResult {
@@ -21,6 +22,7 @@ export interface JobResult {
     paragraph_index: number
   }>>
   essay_markdown: string
+  book_summary: string
 }
 
 export function createJob(gutenbergId: number): Promise<JobStatus> {

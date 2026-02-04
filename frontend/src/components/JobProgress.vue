@@ -12,6 +12,7 @@
       :currentStep="currentStep"
       :completedSteps="completedSteps"
       :detail="detail"
+      :runningSummary="runningSummary"
     />
   </div>
 </template>
@@ -24,9 +25,14 @@ const props = defineProps<{
   jobId: string
 }>()
 
+const emit = defineEmits<{
+  (e: 'done', status: string): void
+}>()
+
 const status = ref('loading')
 const currentStep = ref('')
 const detail = ref('')
+const runningSummary = ref('')
 const completedSteps = ref(new Set<string>())
 const createdAt = ref<string | null>(null)
 const startedAt = ref<string | null>(null)
@@ -34,9 +40,31 @@ const finishedAt = ref<string | null>(null)
 
 let eventSource: EventSource | null = null
 
+const PIPELINE_NODES = [
+  'ingest',
+  'summarize_book',
+  'discover_themes',
+  'retrieve_evidence',
+  'expand_context',
+  'write_theme_intros',
+  'draft_essay',
+  'review_essay',
+  'revise_essay',
+  'persist_results',
+]
+
 watch(currentStep, (step) => {
-  if (step && !completedSteps.value.has(step)) {
-    completedSteps.value.add(step)
+  if (step) {
+    const newCompleted = new Set<string>()
+    for (const node of PIPELINE_NODES) {
+      newCompleted.add(node)
+      if (node === step) break
+    }
+    // Handle revision loop
+    if (step === 'review_essay' && completedSteps.value.has('revise_essay')) {
+      newCompleted.add('revise_essay')
+    }
+    completedSteps.value = newCompleted
   }
 })
 
@@ -55,6 +83,12 @@ function connect() {
       createdAt.value = data.created_at
       startedAt.value = data.started_at
       finishedAt.value = data.finished_at
+      if (data.book_summary) {
+        runningSummary.value = data.book_summary
+      }
+      if (data.progress?.current_step) {
+        currentStep.value = data.progress.current_step
+      }
     })
 
   // Connect to SSE stream
@@ -64,6 +98,11 @@ function connect() {
     const data = JSON.parse(e.data)
     currentStep.value = data.step
     detail.value = data.detail
+
+    if (data.running_summary) {
+      runningSummary.value = data.running_summary
+    }
+
     if (status.value !== 'running') {
       status.value = 'running'
       if (!startedAt.value) startedAt.value = new Date().toISOString()
@@ -74,6 +113,7 @@ function connect() {
     const data = JSON.parse(e.data)
     status.value = data.status
     if (!finishedAt.value) finishedAt.value = new Date().toISOString()
+    emit('done', data.status)
     eventSource?.close()
   })
 

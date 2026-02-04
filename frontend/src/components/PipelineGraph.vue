@@ -47,6 +47,10 @@
     <p v-if="detail && currentStep" class="detail-text">
       <span class="detail-step">{{ currentStepLabel }}:</span> {{ detail }}
     </p>
+    <div v-if="runningSummary" class="running-summary">
+      <h4 class="summary-heading">{{ currentStep === 'summarize_book' ? 'Building Summary...' : 'Book Summary' }}</h4>
+      <p class="summary-text">{{ runningSummary }}</p>
+    </div>
   </div>
 </template>
 
@@ -57,6 +61,7 @@ const props = defineProps<{
   currentStep: string
   completedSteps: Set<string>
   detail: string
+  runningSummary: string
 }>()
 
 const nodeW = 130
@@ -246,5 +251,28 @@ const currentStepLabel = computed(() => stepLabels[props.currentStep] || props.c
 .detail-step {
   font-weight: 600;
   color: var(--accent, #d4835f);
+}
+.running-summary {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--panel-inset);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.summary-heading {
+  margin: 0 0 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  font-weight: 700;
+}
+.summary-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
 }
 </style>
