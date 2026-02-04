@@ -102,6 +102,24 @@ def gutenberg_search(q: str):
     return {"count": data.get("count", 0), "results": data.get("results", [])}
 
 
+@api.get("/jobs")
+def list_jobs(db: Session = Depends(get_db)):
+    logger.info("list jobs")
+    jobs = db.execute(
+        select(Job.id, Document.title, Document.author)
+        .join(Document, Job.document_id == Document.id)
+        .where(Job.status == "succeeded")
+        .order_by(Job.created_at.desc())
+        .limit(20)
+    ).all()
+    return {
+        "essays": [
+            {"id": str(job_id), "title": title, "author": author}
+            for job_id, title, author in jobs
+        ]
+    }
+
+
 @api.post("/jobs", response_model=JobStatusResponse)
 def create_job(payload: JobCreateRequest, db: Session = Depends(get_db)):
     logger.info("create job: gutenberg_id=%s", payload.gutenberg_id)

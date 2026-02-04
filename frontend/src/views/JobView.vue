@@ -22,9 +22,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getJobResult, type JobResult } from '../api/jobs'
+import { getJobResult, getJobStatus, type JobResult } from '../api/jobs'
 import JobProgress from '../components/JobProgress.vue'
 import ThemePills from '../components/ThemePills.vue'
 import EvidencePanel from '../components/EvidencePanel.vue'
@@ -37,19 +37,34 @@ const result = ref<JobResult | null>(null)
 const resultLoaded = ref(false)
 const error = ref('')
 
+async function fetchResult() {
+  try {
+    result.value = await getJobResult(jobId)
+    resultLoaded.value = true
+  } catch (e: any) {
+    error.value = e.message
+  }
+}
+
 async function onDone(status: string) {
   if (status === 'succeeded') {
-    try {
-      result.value = await getJobResult(jobId)
-      resultLoaded.value = true
-    } catch (e: any) {
-      error.value = e.message
-    }
+    await fetchResult()
   } else {
     error.value = `Job ${status}`
     resultLoaded.value = true
   }
 }
+
+onMounted(async () => {
+  try {
+    const status = await getJobStatus(jobId)
+    if (status.status === 'succeeded') {
+      await fetchResult()
+    }
+  } catch (e: any) {
+    error.value = e.message
+  }
+})
 </script>
 
 <style scoped>

@@ -2,6 +2,7 @@
   <div class="home">
     <div class="panels">
       <section class="panel stack">
+        <RecentEssays />
         <BookSearch @select="onBookSelect" />
         <JobCreator ref="jobCreator" @created="onJobCreated" />
       </section>
@@ -14,6 +15,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BookSearch from '../components/BookSearch.vue'
 import JobCreator from '../components/JobCreator.vue'
+import RecentEssays from '../components/RecentEssays.vue'
 
 const router = useRouter()
 const jobCreator = ref<InstanceType<typeof JobCreator> | null>(null)
