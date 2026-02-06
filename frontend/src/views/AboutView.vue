@@ -123,7 +123,8 @@ const nodes = [
   color: #000;
 }
 .panels {
-  max-width: 800px;
+  width: 95%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px 48px;
   display: grid;
@@ -164,16 +165,16 @@ code {
 }
 .node-item h3 {
   margin: 0 0 4px;
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-family: "Fraunces", serif;
   color: #f7f3ec;
 }
 .node-item p {
   margin: 0 0 4px;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
 }
 .produces {
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: #a09a8e;
 }
 .actions {

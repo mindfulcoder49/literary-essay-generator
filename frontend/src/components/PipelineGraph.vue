@@ -246,7 +246,7 @@ const currentStepLabel = computed(() => stepLabels[props.currentStep] || props.c
 .detail-text {
   margin-top: 12px;
   color: var(--muted, #a09a8e);
-  font-size: 0.9rem;
+  font-size: 1.05rem;
 }
 .detail-step {
   font-weight: 600;
@@ -271,7 +271,7 @@ const currentStepLabel = computed(() => stepLabels[props.currentStep] || props.c
 .summary-text {
   margin: 0;
   white-space: pre-wrap;
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--muted);
   line-height: 1.5;
 }

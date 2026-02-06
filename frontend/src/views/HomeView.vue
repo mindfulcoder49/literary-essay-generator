@@ -31,7 +31,8 @@ function onJobCreated(jobId: string) {
 
 <style scoped>
 .panels {
-  max-width: 700px;
+  width: 95%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }

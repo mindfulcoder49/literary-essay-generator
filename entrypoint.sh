@@ -15,7 +15,14 @@ LIVE_DB="/data/literary.db"
 # The `cp -n` command (no-clobber) ensures we don't overwrite an existing DB.
 echo "Checking for live database at ${LIVE_DB}..."
 cp -n "${SEED_DB}" "${LIVE_DB}" 2>/dev/null || true
-echo "Database is ready."
+echo "Database file is ready."
+
+# Run any pending migrations against the live database.
+# This is idempotent — Alembic checks alembic_version and only
+# applies migrations that haven't been run yet.
+echo "Running database migrations..."
+alembic -c alembic.ini upgrade head
+echo "Migrations complete."
 
 # Instead of starting a single process, we now use honcho
 # to start all processes defined in the Procfile.

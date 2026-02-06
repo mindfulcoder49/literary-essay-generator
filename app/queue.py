@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
+import threading
 from datetime import datetime, timedelta
 
+import httpx
 from sqlalchemy import select, update, or_
 from sqlalchemy.orm import Session
 
 from app.models import Job
+
+logger = logging.getLogger("queue")
 
 
 def claim_next_job(db: Session) -> Job | None:
@@ -60,7 +65,17 @@ def mark_job_requeued(db: Session, job: Job, reason: str, delay_seconds: int = 1
     db.commit()
 
 
+def _send_keepalive():
+    """Send a request to the local web server to keep Fly.io machine alive."""
+    try:
+        httpx.get("http://127.0.0.1:8080/api/health", timeout=5)
+    except Exception as e:
+        logger.debug("keepalive ping failed: %s", e)
+
+
 def update_job_progress(db: Session, job: Job, step: str, detail: str):
     job.progress = {"current_step": step, "detail": detail}
     db.add(job)
     db.commit()
+    # Send keepalive in background thread to avoid blocking
+    threading.Thread(target=_send_keepalive, daemon=True).start()

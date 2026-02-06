@@ -11,6 +11,7 @@ from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.routing import APIRouter
 from fastapi.staticfiles import StaticFiles
+import sqlalchemy as sa
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 from sse_starlette.sse import EventSourceResponse
@@ -106,16 +107,29 @@ def gutenberg_search(q: str):
 def list_jobs(db: Session = Depends(get_db)):
     logger.info("list jobs")
     jobs = db.execute(
-        select(Job.id, Document.title, Document.author)
+        select(Job.id, Job.status, Job.created_at, Document.title, Document.author)
         .join(Document, Job.document_id == Document.id)
-        .where(Job.status == "succeeded")
-        .order_by(Job.created_at.desc())
+        .where(Job.status.in_(["succeeded", "running", "queued"]))
+        .order_by(
+            # Running/queued first, then succeeded
+            sa.case(
+                (Job.status == "running", 0),
+                (Job.status == "queued", 1),
+                else_=2,
+            ),
+            Job.created_at.desc(),
+        )
         .limit(20)
     ).all()
     return {
-        "essays": [
-            {"id": str(job_id), "title": title, "author": author}
-            for job_id, title, author in jobs
+        "jobs": [
+            {
+                "id": str(job_id),
+                "status": status,
+                "title": title,
+                "author": author,
+            }
+            for job_id, status, created_at, title, author in jobs
         ]
     }
 
@@ -218,6 +232,8 @@ async def job_stream(job_id: UUID):
     async def event_generator():
         last_step = None
         last_detail = None
+        last_summary = None
+        heartbeat_counter = 0
         while True:
             job_info = await asyncio.to_thread(_get_job_progress, job_id)
             if not job_info:
@@ -227,10 +243,18 @@ async def job_stream(job_id: UUID):
             progress = job_info.get("progress", {})
             current_step = progress.get("current_step")
             detail = progress.get("detail", "")
-
             running_summary = progress.get("running_summary", "")
 
-            if current_step and (current_step != last_step or detail != last_detail):
+            changed = (
+                current_step
+                and (
+                    current_step != last_step
+                    or detail != last_detail
+                    or running_summary != last_summary
+                )
+            )
+
+            if changed:
                 event_data: dict[str, str] = {"step": current_step, "detail": detail}
                 if running_summary:
                     event_data["running_summary"] = running_summary
@@ -240,6 +264,15 @@ async def job_stream(job_id: UUID):
                 }
                 last_step = current_step
                 last_detail = detail
+                last_summary = running_summary
+                heartbeat_counter = 0
+            else:
+                # Send a heartbeat comment every ~30s (15 cycles * 2s)
+                # to keep the connection alive through proxies
+                heartbeat_counter += 1
+                if heartbeat_counter >= 15:
+                    yield {"comment": "heartbeat"}
+                    heartbeat_counter = 0
 
             job_status = job_info.get("status")
             if job_status in ("succeeded", "failed"):
@@ -257,7 +290,24 @@ async def job_stream(job_id: UUID):
 # Mount API router
 app.include_router(api)
 
-# Serve Vue SPA static files — must be last so /api/* routes take priority
+# Mount admin router (before SPA catch-all)
+from app.admin_routes import admin_router
+app.include_router(admin_router)
+
+# Serve Vue SPA with catch-all fallback to index.html for client-side routing.
+# StaticFiles(html=True) does NOT handle SPA fallback — it only serves
+# index.html for the root path, so /jobs/:id would 404 on page refresh.
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    # Mount static assets (JS, CSS, images, etc.) so they're served directly
+    assets_dir = static_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        """Serve static files if they exist, otherwise serve index.html for SPA routing."""
+        file_path = static_dir / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(static_dir / "index.html")

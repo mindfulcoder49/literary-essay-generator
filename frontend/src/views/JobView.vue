@@ -6,9 +6,9 @@
 
         <template v-if="resultLoaded && result">
           <ThemePills :themes="result.themes" />
-          <BookSummary v-if="result.book_summary" :summary="result.book_summary" />
           <EvidencePanel :evidence="result.evidence" />
           <EssayDisplay :markdown="result.essay_markdown" />
+          <BookSummary v-if="result.book_summary" :summary="result.book_summary" />
         </template>
 
         <div v-if="error" class="error">{{ error }}</div>
@@ -71,7 +71,8 @@ onMounted(async () => {
 
 <style scoped>
 .panels {
-  max-width: 900px;
+  width: 95%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 0 24px 48px;
 }

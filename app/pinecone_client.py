@@ -65,6 +65,22 @@ def namespace_vector_count(pc: PineconeClient, namespace: str) -> int:
     return count
 
 
+def list_namespaces(pc: PineconeClient) -> dict[str, int]:
+    """Return {namespace: vector_count} for all namespaces in the index."""
+    index = pc.index()
+    stats = index.describe_index_stats()
+    ns_map = stats.get("namespaces", {})
+    result = {ns: info.get("vector_count", 0) for ns, info in ns_map.items()}
+    pc._logger.info("pinecone list_namespaces count=%s", len(result))
+    return result
+
+
+def delete_namespace(pc: PineconeClient, namespace: str):
+    index = pc.index()
+    index.delete(delete_all=True, namespace=namespace)
+    pc._logger.info("pinecone delete_namespace namespace=%s", namespace)
+
+
 def query_similar(
     pc: PineconeClient,
     namespace: str,

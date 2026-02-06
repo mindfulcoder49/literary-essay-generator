@@ -27,6 +27,6 @@ h2 {
   border-radius: 999px;
   background: #fff;
   border: 1px solid #e3ded4;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
 }
 </style>

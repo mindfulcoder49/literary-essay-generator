@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     gutenberg_text_url: str = "https://www.gutenberg.org/ebooks/{id}.txt.utf-8"
     gutendex_url: str = "https://gutendex.com/books"
 
+    # Admin
+    admin_username: str = "admin"
+    admin_password: str = ""
+
     # Worker
     worker_poll_seconds: int = 3
     max_segment_chars: int = 2000

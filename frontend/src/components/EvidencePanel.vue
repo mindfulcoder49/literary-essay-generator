@@ -57,7 +57,7 @@ h2 {
   padding: 10px 14px;
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
   font-weight: 600;
   text-align: left;
   color: var(--ink);
@@ -66,7 +66,7 @@ h2 {
   border-color: var(--accent);
 }
 .arrow {
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   transition: transform 0.15s;
 }
 .arrow.open {
@@ -76,7 +76,7 @@ h2 {
   margin-left: auto;
   color: var(--muted);
   font-weight: 400;
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 .passages {
   padding: 8px 0 0 20px;
@@ -87,7 +87,7 @@ h2 {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  font-size: 0.88rem;
+  font-size: 1.05rem;
   line-height: 1.5;
   padding: 8px;
   background: #faf8f4;
@@ -103,7 +103,7 @@ h2 {
 }
 .seg-chapter {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   white-space: nowrap;
 }
 </style>

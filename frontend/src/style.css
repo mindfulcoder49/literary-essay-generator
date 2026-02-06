@@ -5,7 +5,8 @@
   --ink: #1a1a1a;
   --accent: #c97c5d;
   --accent-2: #6aa6b8;
-  --muted: #6b7280;
+  --muted: #222428;
+  --panel-inset: #ffffff;
 }
 
 * { box-sizing: border-box; }
@@ -13,6 +14,8 @@
 body {
   margin: 0;
   font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  font-size: 1.375rem;
+  line-height: 1.6;
   color: var(--ink);
   background: radial-gradient(circle at top left, #223451 0%, var(--bg) 35%, #0b1320 100%);
   min-height: 100vh;
@@ -24,7 +27,7 @@ body {
 
 input, button, textarea {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: inherit;
 }
 
 input[type="text"],

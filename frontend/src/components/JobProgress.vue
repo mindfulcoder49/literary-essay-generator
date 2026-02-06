@@ -146,7 +146,7 @@ onUnmounted(() => {
   font-weight: 600;
   padding: 4px 10px;
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   text-transform: capitalize;
 }
 .status-indicator.queued { background-color: #4a4a4a; color: #fff; }
@@ -154,7 +154,7 @@ onUnmounted(() => {
 .status-indicator.succeeded { background-color: #16a34a; color: #fff; }
 .status-indicator.failed { background-color: #dc2626; color: #fff; }
 .timestamps {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--muted);
   display: flex;
   gap: 12px;

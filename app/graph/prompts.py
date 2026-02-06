@@ -12,17 +12,18 @@ Respond as a JSON array of strings."""
 
 SUMMARIZE_CHUNK_SYSTEM = """\
 You are a literary summarizer. Produce clear, detailed summaries of book passages \
-that capture key events, characters, themes, and narrative developments."""
+that capture key events, characters, themes, and narrative developments. \
+Write only the summary for the new passage — do NOT repeat or rewrite earlier summaries."""
 
 SUMMARIZE_CHUNK_USER = """\
-Here is the running summary so far (empty if this is the first chunk):
+Here is what has been summarized so far (for context only — do NOT repeat this):
 
 {running_summary}
 
-Now summarize the following passage from the book, integrating it with the \
-running summary above. Produce a single cohesive summary covering everything so far.
+Now write a summary of ONLY the following new passage. Cover the key events, \
+characters, dialogue, and developments. Do not restate anything from the summary above.
 
-Passage:
+New passage:
 {chunk_text}"""
 
 THEME_INTRO_SYSTEM = """\

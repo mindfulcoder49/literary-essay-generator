@@ -8,14 +8,17 @@
 
     <h2>Fly.io Hosting Costs</h2>
     <p>
-      The app runs as two separate processes on Fly.io: a `web` server and a `worker`.
-      Their costs are calculated independently.
+      The app runs as a <strong>single Fly.io machine</strong> using
+      <a href="https://honcho.readthedocs.io/" target="_blank" rel="noopener">honcho</a>
+      to manage both the web server and the background worker as co-processes.
+      This means one VM bill instead of two.
     </p>
 
-    <h3>Web Server (auto-stops)</h3>
+    <h3>Single Machine (auto-stops)</h3>
     <p>
-      The `web` process serves the frontend and API. It's configured to automatically stop
-      when idle and restart on the next request, which significantly reduces cost.
+      The machine runs both the API server (uvicorn) and the job worker in a single
+      container. Fly.io's auto-stop feature stops the entire machine when there's no HTTP
+      traffic, and restarts it on the next request. Both processes start and stop together.
     </p>
     <table>
       <tr>
@@ -26,46 +29,17 @@
       <tr>
         <td>Compute (VM)</td>
         <td>1x shared CPU, 512 MB RAM</td>
-        <td class="cost">~$4.13/mo</td>
+        <td class="cost">~$3.89/mo</td>
       </tr>
     </table>
     <div class="info">
-      Because it auto-stops, a lightly-used `web` process typically costs
-      <strong>less than $1/month</strong>.
+      Because the machine auto-stops when idle, a lightly-used deployment typically costs
+      <strong>well under $1/month</strong> in compute. The worker process starts alongside
+      the web server and is ready to process jobs as soon as the machine wakes up.
     </div>
 
-    <h3>Worker (always on)</h3>
-    <p>
-      The `worker` process runs the AI pipeline. It is configured to run 24/7 and
-      <strong>does not auto-stop</strong>. You are billed for it continuously until you
-      manually scale it down to zero.
-    </p>
-    <div class="info">
-      <strong>Why doesn't the worker auto-stop?</strong> The standard auto-stop feature is
-      triggered by HTTP traffic. Since the worker only pulls jobs from a database queue and
-      doesn't receive external requests, Fly.io has no signal to know when it's "idle".
-    </div>
-    <table>
-      <tr>
-        <th>Resource</th>
-        <th>Configuration</th>
-        <th>Cost (while running)</th>
-      </tr>
-      <tr>
-        <td>Compute (VM)</td>
-        <td>1x shared CPU, 512 MB RAM</td>
-        <td class="cost">~$4.13/mo</td>
-      </tr>
-    </table>
-    <div class="note">
-      <strong>Important:</strong> The worker costs money as long as it's scaled up. To stop
-      billing, you must scale it down manually:
-      <br />
-      <code>fly scale count 0 --process-group worker</code>
-    </div>
-
-    <h3>Shared Resources</h3>
-    <p>These resources are billed regardless of whether the machines are running.</p>
+    <h3>Persistent Storage</h3>
+    <p>These resources are billed regardless of whether the machine is running.</p>
     <table>
       <tr>
         <th>Resource</th>
@@ -79,8 +53,8 @@
       </tr>
       <tr>
         <td>Outbound Data</td>
-        <td>First 100 GB / month</td>
-        <td class="cost">Free</td>
+        <td>North America &amp; Europe</td>
+        <td class="cost">$0.02/GB</td>
       </tr>
     </table>
 
@@ -108,18 +82,22 @@
         <th>Estimated Monthly Cost</th>
       </tr>
       <tr class="highlight">
-        <td>Idle (worker scaled to 0)</td>
-        <td class="cost">~$0.15 (for the volume)</td>
+        <td>Idle (machine stopped, no traffic)</td>
+        <td class="cost">~$0.15 (volume only)</td>
       </tr>
       <tr>
-        <td>Development / Light Use (worker scaled to 1)</td>
-        <td>~$4.50 - $5.00</td>
+        <td>Light use (occasional requests)</td>
+        <td>~$0.50 - $1.00</td>
       </tr>
       <tr>
-        <td>Always On (web + 1 worker, 24/7)</td>
-        <td>~$8.41</td>
+        <td>Always on (continuous traffic 24/7)</td>
+        <td>~$4.04</td>
       </tr>
     </table>
+    <div class="info">
+      Running both processes on a single machine with auto-stop cuts Fly.io costs roughly
+      in half compared to running separate web and worker machines.
+    </div>
 
     <h2>How to Shut It Down Permanently</h2>
     <p>To stop all Fly.io billing, you must destroy the app. This will delete all machines,
@@ -158,7 +136,8 @@ body {
   line-height: 1.6;
 }
 .container {
-  max-width: 720px;
+  width: 95%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 32px 20px 64px;
   color: #f7f3ec;
@@ -168,23 +147,23 @@ body {
   margin-bottom: 16px;
   color: var(--accent-2);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 1.05rem;
 }
 .back-link:hover {
   text-decoration: underline;
 }
 h1 {
-  font-size: 28px;
+  font-size: 1.8rem;
   margin-bottom: 8px;
   font-family: 'Fraunces', serif;
 }
 .subtitle {
   color: #a09a8e;
-  font-size: 15px;
+  font-size: 1.1rem;
   margin-bottom: 32px;
 }
 h2 {
-  font-size: 20px;
+  font-size: 1.3rem;
   margin: 28px 0 12px;
   color: #f7f3ec;
   font-family: 'Fraunces', serif;
@@ -192,21 +171,21 @@ h2 {
   padding-bottom: 8px;
 }
 h3 {
-  font-size: 16px;
+  font-size: 1.1rem;
   margin: 20px 0 8px;
   color: #e0dace;
   font-family: 'Fraunces', serif;
 }
 p {
   margin-bottom: 12px;
-  font-size: 15px;
+  font-size: 1.1rem;
   color: #c7c1b5;
 }
 table {
   width: 100%;
   border-collapse: collapse;
   margin: 12px 0 20px;
-  font-size: 14px;
+  font-size: 1.05rem;
 }
 th,
 td {
@@ -217,7 +196,7 @@ td {
 th {
   background: #2a2a2a;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 1rem;
   color: #a09a8e;
 }
 .highlight {
@@ -236,7 +215,7 @@ th {
   border-left: 4px solid #f59e0b;
   padding: 12px 16px;
   margin: 16px 0;
-  font-size: 14px;
+  font-size: 1.05rem;
   border-radius: 0 6px 6px 0;
 }
 .note strong {
@@ -250,7 +229,7 @@ th {
   border-left: 4px solid #3b82f6;
   padding: 12px 16px;
   margin: 16px 0;
-  font-size: 14px;
+  font-size: 1.05rem;
   border-radius: 0 6px 6px 0;
 }
 a {
@@ -260,12 +239,12 @@ code {
   background: #333;
   padding: 2px 6px;
   border-radius: 3px;
-  font-size: 13px;
+  font-size: 0.9em;
   color: #e0dace;
 }
 ul {
   margin: 8px 0 16px 24px;
-  font-size: 15px;
+  font-size: 1.1rem;
 }
 li {
   margin-bottom: 4px;
@@ -274,6 +253,6 @@ li {
 .disclaimer {
   margin-top: 24px;
   color: #777;
-  font-size: 13px;
+  font-size: 1rem;
 }
 </style>

@@ -25,6 +25,23 @@ const router = createRouter({
       name: 'cost',
       component: () => import('../views/CostView.vue'),
     },
+    {
+      path: '/admin/login',
+      name: 'admin-login',
+      component: () => import('../views/AdminLoginView.vue'),
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: () => import('../views/AdminView.vue'),
+      beforeEnter: (_to, _from, next) => {
+        if (sessionStorage.getItem('adminCredentials')) {
+          next()
+        } else {
+          next({ name: 'admin-login' })
+        }
+      },
+    },
   ],
 })
 

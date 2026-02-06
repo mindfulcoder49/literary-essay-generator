@@ -10,7 +10,7 @@ WORKDIR /app
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . ./
-COPY --from=frontend /frontend/dist ./app/static/
+COPY --from=frontend /app/static ./app/static/
 
 # Create a seed database with the correct schema during the build
 RUN python scripts/create_seed_db.py

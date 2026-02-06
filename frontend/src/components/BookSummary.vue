@@ -26,7 +26,6 @@ h3 {
 .summary-content {
   white-space: pre-wrap;
   color: var(--muted);
-  font-size: 0.95rem;
   line-height: 1.6;
 }
 </style>

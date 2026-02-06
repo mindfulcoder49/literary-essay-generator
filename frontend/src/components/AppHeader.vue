@@ -6,6 +6,7 @@
         <router-link to="/">Home</router-link>
         <router-link to="/about">How It Works</router-link>
         <router-link to="/cost">Hosting Cost</router-link>
+        <router-link to="/admin">Admin</router-link>
       </nav>
     </div>
     <p>Search Project Gutenberg, generate theme-based literary analysis with AI.</p>
@@ -27,16 +28,17 @@
   margin: 0 0 8px;
   font-family: "Fraunces", serif;
   font-weight: 600;
+  font-size: 2.4rem;
   letter-spacing: 0.5px;
 }
 .header-nav {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 .header-nav a {
   color: #d6d1c5;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   font-weight: 500;
   transition: color 0.2s;
 }
@@ -47,5 +49,6 @@
 .app-header p {
   margin: 0;
   color: #d6d1c5;
+  font-size: 1.15rem;
 }
 </style>

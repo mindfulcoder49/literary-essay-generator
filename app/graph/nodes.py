@@ -212,6 +212,7 @@ def summarize_book_node(state: EssayGraphState) -> dict[str, Any]:
         temperature=0.2,
     )
 
+    # running_summary accumulates by appending each chunk's summary
     running_summary = ""
     start_chunk_idx = 0
 
@@ -259,10 +260,16 @@ def summarize_book_node(state: EssayGraphState) -> dict[str, Any]:
             {"role": "system", "content": SUMMARIZE_CHUNK_SYSTEM},
             {"role": "user", "content": prompt},
         ])
-        running_summary = response.content
+        chunk_summary = response.content
         logger.info("summarize_book_node: chunk %s/%s done", i + 1, total_chunks)
 
-        # Persist running summary to document and progress
+        # Append this chunk's summary to the running summary
+        if running_summary:
+            running_summary = running_summary + "\n\n" + chunk_summary
+        else:
+            running_summary = chunk_summary
+
+        # Persist accumulated summary to document and progress
         with SessionLocal() as db:
             doc = db.get(Document, document_id)
             if doc:
