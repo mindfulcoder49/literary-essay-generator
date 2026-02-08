@@ -10,7 +10,7 @@
         <span class="back-arrow">&larr;</span>
         <span class="back-text">Back</span>
       </button>
-      <div v-if="total > 1" class="step-indicator">
+      <div v-if="total && total > 1" class="step-indicator">
         Step {{ current }} of {{ total }}
       </div>
     </div>
