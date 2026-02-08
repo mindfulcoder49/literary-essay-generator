@@ -39,3 +39,7 @@ export function getJobStatus(id: string): Promise<JobStatus> {
 export function getJobResult(id: string): Promise<JobResult> {
   return apiFetch(`/jobs/${id}/result`)
 }
+
+export function resumeJob(id: string): Promise<{ status: string; requeued: boolean }> {
+  return apiFetch(`/jobs/${id}/resume`, { method: 'POST' })
+}

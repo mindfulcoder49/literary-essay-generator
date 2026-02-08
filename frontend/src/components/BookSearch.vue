@@ -1,13 +1,13 @@
 <template>
   <div class="book-search">
     <h2>Search Gutenberg</h2>
-    <label for="search">Search term</label>
-    <div class="row">
+    <label for="search" class="sr-only">Search term</label>
+    <div class="search-wrapper">
       <input
         id="search"
         v-model="query"
         type="text"
-        placeholder="e.g. pride and prejudice"
+        placeholder="Search by title or author..."
         @keyup.enter="doSearch"
       />
       <button @click="doSearch" :disabled="searching">
@@ -16,29 +16,40 @@
     </div>
     <div v-if="error" class="error">{{ error }}</div>
     <div v-if="results.length" class="results">
-      <BookSearchResult
+      <BookCard
         v-for="book in results"
         :key="book.id"
-        :book="book"
+        :title="book.title"
+        :author="getAuthor(book)"
         @select="$emit('select', book.id)"
       />
     </div>
-    <p v-if="searched && !results.length" class="muted">No results found.</p>
+    <p v-if="searched && !results.length" class="no-results">No results found.</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { searchGutenberg } from '../api/gutenberg'
-import BookSearchResult from './BookSearchResult.vue'
+import BookCard from './BookCard.vue'
 
 defineEmits<{ select: [id: number] }>()
 
+interface Book {
+  id: number
+  title: string
+  authors: Array<{ name: string }>
+}
+
 const query = ref('')
-const results = ref<Array<{ id: number; title: string; authors: Array<{ name: string }> }>>([])
+const results = ref<Book[]>([])
 const searching = ref(false)
 const searched = ref(false)
 const error = ref('')
+
+function getAuthor(book: Book): string {
+  return book.authors?.[0]?.name ?? 'Unknown Author'
+}
 
 async function doSearch() {
   const q = query.value.trim()
@@ -59,21 +70,44 @@ async function doSearch() {
 
 <style scoped>
 h2 {
-  margin-top: 0;
-  font-family: "Fraunces", serif;
+  margin: 0 0 16px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
 }
-.row {
+
+.search-wrapper {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  gap: 12px;
 }
+
+@media (max-width: 639px) {
+  .search-wrapper {
+    flex-direction: column;
+  }
+}
+
 .results {
-  margin-top: 12px;
-  display: grid;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
 }
+
 .error {
-  color: #e55;
-  margin-top: 8px;
+  color: var(--error);
+  margin-top: 12px;
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
+.no-results {
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: 24px;
 }
 </style>

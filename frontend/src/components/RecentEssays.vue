@@ -1,22 +1,27 @@
 <template>
   <div class="recent-essays">
-    <h2>Jobs</h2>
+    <h2>Your Essays</h2>
     <div v-if="loading" class="loading">Loading...</div>
     <div v-if="error" class="error">{{ error }}</div>
-    <ul v-if="jobs.length > 0" class="essay-list">
-      <li v-for="job in jobs" :key="job.id">
-        <router-link :to="{ name: 'job', params: { id: job.id } }">
-          <div class="job-row">
-            <div class="job-info">
-              <span class="title">{{ job.title || 'Untitled' }}</span>
-              <span class="author" v-if="job.author">by {{ job.author }}</span>
-            </div>
-            <span :class="['status-badge', job.status]">{{ job.status }}</span>
-          </div>
-        </router-link>
-      </li>
-    </ul>
-    <p v-if="!loading && jobs.length === 0">No jobs yet. Search for a book above to get started.</p>
+
+    <div v-if="jobs.length > 0" class="jobs-grid">
+      <router-link
+        v-for="job in jobs"
+        :key="job.id"
+        :to="{ name: 'job', params: { id: job.id } }"
+        class="job-card"
+      >
+        <div class="job-info">
+          <span class="title">{{ job.title || 'Untitled' }}</span>
+          <span class="author" v-if="job.author">by {{ job.author }}</span>
+        </div>
+        <span :class="['status-badge', job.status]">{{ job.status }}</span>
+      </router-link>
+    </div>
+
+    <p v-if="!loading && jobs.length === 0" class="empty">
+      No essays yet. Search for a book to get started.
+    </p>
   </div>
 </template>
 
@@ -40,7 +45,7 @@ async function fetchJobs() {
     const response = await apiFetch<{ jobs: JobListItem[] }>('/jobs')
     jobs.value = response.jobs
   } catch (e: any) {
-    error.value = 'Failed to load jobs.'
+    error.value = 'Failed to load essays.'
     console.error(e)
   } finally {
     loading.value = false
@@ -52,103 +57,124 @@ onMounted(fetchJobs)
 
 <style scoped>
 .recent-essays {
-  background: var(--panel-light);
-  border-radius: 12px;
+  background: var(--surface);
+  border-radius: 16px;
   padding: 20px;
+  border: 1px solid var(--border);
 }
 
 h2 {
-  margin-top: 0;
-  font-family: 'Fraunces', serif;
-  font-size: 1.2rem;
-  border-bottom: 1px solid #e3ded4;
-  padding-bottom: 12px;
-  margin-bottom: 12px;
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .loading,
 .error {
   padding: 12px 0;
+  font-size: 0.9375rem;
 }
 
 .error {
-  color: #e55;
+  color: var(--error);
 }
 
-.essay-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
+.jobs-grid {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.essay-list a {
-  display: block;
-  padding: 12px;
-  background: #fff;
-  border-radius: 8px;
-  text-decoration: none;
-  color: var(--text-color);
-  border: 1px solid #e3ded4;
-  transition:
-    background-color 0.2s,
-    transform 0.2s;
+@media (min-width: 640px) {
+  .jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
 }
 
-.essay-list a:hover {
-  background-color: #f9f7f2;
-  transform: translateY(-2px);
-}
-
-.job-row {
+.job-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-soft);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.job-card:hover {
+  background: var(--surface);
+  border-color: var(--border);
+  transform: translateY(-1px);
 }
 
 .job-info {
   min-width: 0;
+  flex: 1;
 }
 
 .title {
   font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text);
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .author {
-  font-size: 1.05rem;
-  color: #666;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
 }
 
 .status-badge {
   flex-shrink: 0;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 10px;
+  padding: 4px 10px;
+  border-radius: 12px;
   text-transform: capitalize;
 }
 
 .status-badge.succeeded {
-  background: #dcfce7;
-  color: #166534;
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
 }
 
 .status-badge.running {
-  background: #dbeafe;
-  color: #1e40af;
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
   animation: pulse-badge 1.5s ease-in-out infinite;
 }
 
 .status-badge.queued {
-  background: #f3f4f6;
-  color: #4b5563;
+  background: var(--bg-soft);
+  color: var(--text-muted);
+}
+
+.status-badge.failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
 }
 
 @keyframes pulse-badge {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
+}
+
+.empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 0;
+  margin: 0;
+  font-size: 0.9375rem;
 }
 </style>

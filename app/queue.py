@@ -66,11 +66,52 @@ def mark_job_requeued(db: Session, job: Job, reason: str, delay_seconds: int = 1
 
 
 def _send_keepalive():
-    """Send a request to the local web server to keep Fly.io machine alive."""
+    """Send a request through the external domain to keep Fly.io machine alive.
+
+    We must go through the external URL so Fly.io's proxy sees the traffic.
+    Internal localhost requests don't prevent auto-stop.
+    """
     try:
-        httpx.get("http://127.0.0.1:8080/api/health", timeout=5)
+        httpx.get("https://literary-essays.fly.dev/api/health", timeout=10)
     except Exception as e:
         logger.debug("keepalive ping failed: %s", e)
+
+
+def send_keepalive():
+    """Public function to send a keepalive ping in a background thread."""
+    threading.Thread(target=_send_keepalive, daemon=True).start()
+
+
+class KeepaliveThread:
+    """
+    Background thread that sends periodic keepalive pings.
+    Use as a context manager for long-running operations.
+
+    Example:
+        with KeepaliveThread(interval=30):
+            # long running LLM call
+            result = llm.invoke(...)
+    """
+    def __init__(self, interval: float = 30.0):
+        self.interval = interval
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def _run(self):
+        while not self._stop_event.wait(self.interval):
+            _send_keepalive()
+
+    def __enter__(self):
+        self._stop_event.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=1)
+        return False
 
 
 def update_job_progress(db: Session, job: Job, step: str, detail: str):
@@ -78,4 +119,4 @@ def update_job_progress(db: Session, job: Job, step: str, detail: str):
     db.add(job)
     db.commit()
     # Send keepalive in background thread to avoid blocking
-    threading.Thread(target=_send_keepalive, daemon=True).start()
+    send_keepalive()

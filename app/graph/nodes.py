@@ -29,7 +29,7 @@ from app.graph.state import EssayGraphState
 from app.logging_config import configure_logging
 from app.models import Document, Job, JobArtifact
 from app.pinecone_client import PineconeClient, namespace_vector_count, query_similar, upsert_embeddings
-from app.queue import update_job_progress
+from app.queue import update_job_progress, KeepaliveThread
 from app.segment import segment_text
 
 logger = configure_logging("graph", "worker.log")
@@ -256,10 +256,11 @@ def summarize_book_node(state: EssayGraphState) -> dict[str, Any]:
             running_summary=running_summary or "(none — this is the first chunk)",
             chunk_text=chunk_text,
         )
-        response = llm.invoke([
-            {"role": "system", "content": SUMMARIZE_CHUNK_SYSTEM},
-            {"role": "user", "content": prompt},
-        ])
+        with KeepaliveThread(interval=30):
+            response = llm.invoke([
+                {"role": "system", "content": SUMMARIZE_CHUNK_SYSTEM},
+                {"role": "user", "content": prompt},
+            ])
         chunk_summary = response.content
         logger.info("summarize_book_node: chunk %s/%s done", i + 1, total_chunks)
 
@@ -321,10 +322,11 @@ def discover_themes_node(state: EssayGraphState) -> dict[str, Any]:
     prompt = THEME_DISCOVERY_USER.format(
         title=title, author=author, book_summary=book_summary
     )
-    response = llm.invoke([
-        {"role": "system", "content": THEME_DISCOVERY_SYSTEM},
-        {"role": "user", "content": prompt},
-    ])
+    with KeepaliveThread(interval=30):
+        response = llm.invoke([
+            {"role": "system", "content": THEME_DISCOVERY_SYSTEM},
+            {"role": "user", "content": prompt},
+        ])
 
     raw = response.content
     try:
@@ -464,10 +466,11 @@ def write_theme_intros_node(state: EssayGraphState) -> dict[str, Any]:
             theme=theme,
             evidence_snippets=evidence_text,
         )
-        response = llm.invoke([
-            {"role": "system", "content": THEME_INTRO_SYSTEM},
-            {"role": "user", "content": prompt},
-        ])
+        with KeepaliveThread(interval=30):
+            response = llm.invoke([
+                {"role": "system", "content": THEME_INTRO_SYSTEM},
+                {"role": "user", "content": prompt},
+            ])
         theme_intros[theme] = response.content
         logger.info("write_theme_intros_node: wrote intro for theme '%s'", theme)
 
@@ -517,10 +520,11 @@ def draft_essay_node(state: EssayGraphState) -> dict[str, Any]:
         theme_intros_block=theme_intros_block,
         evidence_block=evidence_block,
     )
-    response = llm.invoke([
-        {"role": "system", "content": ESSAY_DRAFT_SYSTEM},
-        {"role": "user", "content": prompt},
-    ])
+    with KeepaliveThread(interval=30):
+        response = llm.invoke([
+            {"role": "system", "content": ESSAY_DRAFT_SYSTEM},
+            {"role": "user", "content": prompt},
+        ])
 
     essay = response.content
     logger.info("draft_essay_node: drafted essay for %s themes", len(themes))
@@ -553,10 +557,11 @@ def review_essay_node(state: EssayGraphState) -> dict[str, Any]:
         temperature=0.1,
     )
     prompt = REVIEW_USER.format(themes=", ".join(themes), essay=essay)
-    response = llm.invoke([
-        {"role": "system", "content": REVIEW_SYSTEM},
-        {"role": "user", "content": prompt},
-    ])
+    with KeepaliveThread(interval=30):
+        response = llm.invoke([
+            {"role": "system", "content": REVIEW_SYSTEM},
+            {"role": "user", "content": prompt},
+        ])
 
     raw = response.content
     try:
@@ -602,10 +607,11 @@ def revise_essay_node(state: EssayGraphState) -> dict[str, Any]:
         temperature=0.3,
     )
     prompt = REVISE_USER.format(feedback=feedback, essay=essay, evidence_block=evidence_block)
-    response = llm.invoke([
-        {"role": "system", "content": REVISE_SYSTEM},
-        {"role": "user", "content": prompt},
-    ])
+    with KeepaliveThread(interval=30):
+        response = llm.invoke([
+            {"role": "system", "content": REVISE_SYSTEM},
+            {"role": "user", "content": prompt},
+        ])
 
     revised = response.content
     logger.info("revise_essay_node: revised essay revision_count=%s", revision_count + 1)

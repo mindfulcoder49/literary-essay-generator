@@ -13,19 +13,24 @@ defineProps<{
 
 <style scoped>
 .book-summary {
-  background: var(--panel-inset);
+  background: var(--bg-soft);
   padding: 16px;
   border-radius: 12px;
 }
+
 h3 {
-  margin-top: 0;
-  font-family: 'Fraunces', serif;
+  margin: 0 0 12px;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-light);
 }
+
 .summary-content {
   white-space: pre-wrap;
-  color: var(--muted);
-  line-height: 1.6;
+  color: var(--text);
+  line-height: 1.7;
+  font-size: 1rem;
 }
 </style>

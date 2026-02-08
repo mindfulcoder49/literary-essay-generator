@@ -159,6 +159,28 @@ def create_job(payload: JobCreateRequest, db: Session = Depends(get_db)):
     )
 
 
+@api.post("/jobs/{job_id}/resume")
+def resume_job(job_id: UUID, db: Session = Depends(get_db)):
+    """Requeue a running job that was interrupted (e.g., by Fly.io auto-stop).
+
+    Only affects jobs with status 'running'. Returns the updated job status.
+    If the job is already queued or completed, this is a no-op.
+    """
+    logger.info("resume job: %s", job_id)
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status == "running":
+        job.status = "queued"
+        job.started_at = None
+        db.commit()
+        db.refresh(job)
+        logger.info("requeued stalled job %s", job_id)
+
+    return {"status": job.status, "requeued": job.status == "queued"}
+
+
 @api.get("/jobs/{job_id}", response_model=JobStatusResponse)
 def get_job_status(job_id: UUID, db: Session = Depends(get_db)):
     logger.info("job status: %s", job_id)

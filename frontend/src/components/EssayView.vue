@@ -1,6 +1,5 @@
 <template>
-  <div class="essay-display" v-if="markdown">
-    <h2>Essay</h2>
+  <div class="essay-view">
     <div class="essay-content" v-html="rendered"></div>
   </div>
 </template>
@@ -9,37 +8,37 @@
 import { computed } from 'vue'
 import { marked } from 'marked'
 
-const props = defineProps<{ markdown: string }>()
+const props = defineProps<{
+  markdown: string
+}>()
 
 const rendered = computed(() => marked(props.markdown))
 </script>
 
 <style scoped>
-h2 {
-  margin: 0 0 16px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-light);
+.essay-view {
+  padding: 20px;
+}
+
+@media (min-width: 640px) {
+  .essay-view {
+    padding: 24px 32px;
+  }
 }
 
 .essay-content {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  line-height: 1.8;
   font-size: 1rem;
+  line-height: 1.8;
+  color: var(--text);
 }
 
 @media (min-width: 640px) {
   .essay-content {
-    padding: 24px;
     font-size: 1.0625rem;
   }
 }
 
+/* Markdown content styling */
 .essay-content :deep(h1),
 .essay-content :deep(h2),
 .essay-content :deep(h3),
@@ -49,8 +48,8 @@ h2 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 700;
-  color: var(--text);
   line-height: 1.3;
+  color: var(--text);
 }
 
 .essay-content :deep(h1) { font-size: 1.5rem; }
@@ -59,7 +58,6 @@ h2 {
 
 .essay-content :deep(p) {
   margin: 1em 0;
-  color: var(--text);
 }
 
 .essay-content :deep(a) {
@@ -123,5 +121,12 @@ h2 {
 
 .essay-content :deep(strong) {
   font-weight: 600;
+}
+
+/* Citation styling - match [segment_id] pattern */
+.essay-content :deep(a[href^="#"]),
+.essay-content :deep(sup) {
+  color: var(--accent);
+  font-weight: 500;
 }
 </style>

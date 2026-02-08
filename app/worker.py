@@ -10,7 +10,7 @@ from app.db import SessionLocal
 from app.graph.builder import build_essay_graph
 from app.logging_config import configure_logging, log_startup_config
 from app.models import Document, Job
-from app.queue import claim_next_job, mark_job_failed
+from app.queue import claim_next_job, mark_job_failed, KeepaliveThread
 
 logger = configure_logging("worker", "worker.log")
 
@@ -53,8 +53,9 @@ async def run_worker():
                 continue
 
             logger.info("claimed job %s (%s)", job.id, job.job_type)
-            with SessionLocal() as db:
-                await process_job(db, job)
+            with KeepaliveThread(interval=30):
+                with SessionLocal() as db:
+                    await process_job(db, job)
             logger.info("completed job %s", job.id)
         except Exception as exc:
             logger.error("worker error: %s", exc)
